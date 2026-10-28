@@ -1,7 +1,7 @@
 // Hayal — yazıdan resim. Cloudflare FLUX, Worker üzerinden (anahtar orada gizli).
 
 // Worker yüklenince adresi buraya yazılır; ?worker=... ile geçici olarak değiştirilebilir
-const WORKER_URL = new URLSearchParams(location.search).get("worker") || "";
+const WORKER_URL = new URLSearchParams(location.search).get("worker") || "https://hayal.enesbyr1.workers.dev";
 
 const STYLES = [
   { name: "Serbest", text: "" },
