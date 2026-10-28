@@ -1,7 +1,7 @@
-// Hayal — yazıdan resim. Cloudflare FLUX, Worker üzerinden (anahtar orada gizli).
+// Hayal — yazıdan resim. Cloudflare FLUX, Netlify Function üzerinden (anahtar orada gizli).
 
-// Çizim adresi (Cloudflare Pages Function); ?worker=... ile geçici olarak değiştirilebilir
-const WORKER_URL = new URLSearchParams(location.search).get("worker") || "https://hayal-6it.pages.dev/api/draw";
+// Çizim adresi (Netlify Function); ?worker=... ile geçici olarak değiştirilebilir
+const WORKER_URL = new URLSearchParams(location.search).get("worker") || "https://hayal-enes.netlify.app/api/draw";
 
 const STYLES = [
   { name: "Serbest", text: "" },
