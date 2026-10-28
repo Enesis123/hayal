@@ -1,5 +1,5 @@
 // Ağ önce, olmazsa önbellek (Slot Salonu'nda önbellek-önce eski/yeni dosyaları karıştırmıştı)
-const VERSION = "hayal-4";
+const VERSION = "hayal-5";
 const FILES = ["./", "index.html", "app.js", "manifest.webmanifest", "icons/icon.svg", "icons/icon-180.png"];
 
 self.addEventListener("install", (e) => {

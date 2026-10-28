@@ -15,8 +15,51 @@ const STYLES = [
   { name: "Logo", text: "minimal flat vector logo, simple shapes, white background" },
 ];
 
+// Bedeller sunucudakiyle aynı (1024×1024 resim başına nöron), kalan sayısını tahmin etmek için
+const MODELS = [
+  { key: "fast", name: "Hızlı", note: "FLUX.1 · ~5 sn", cost: 77 },
+  { key: "good", name: "Kaliteli", note: "FLUX.2 klein", cost: 104 },
+  { key: "master", name: "Usta", note: "FLUX.2 dev · yazı, detay", cost: 1200 },
+];
+
 const $ = (id) => document.getElementById(id);
-const state = { style: 0, count: 1, busy: false };
+const state = { style: 0, model: 0, count: 1, busy: false };
+
+// ---- Kota tahmini: bu tarayıcının bugün harcadığı nöron (Cloudflare günü UTC'de döner) ----
+const today = () => new Date().toISOString().slice(0, 10);
+function loadUsage() {
+  try {
+    const u = JSON.parse(localStorage.getItem("hayal-usage") || "{}");
+    return u.day === today() ? u : { day: today(), spent: 0, capacity: 10000 };
+  } catch {
+    return { day: today(), spent: 0, capacity: 10000 };
+  }
+}
+function saveUsage(u) {
+  try { localStorage.setItem("hayal-usage", JSON.stringify(u)); } catch { /* gizli pencere */ }
+}
+function addUsage(cost, capacity) {
+  const u = loadUsage();
+  u.spent += cost;
+  if (capacity) u.capacity = capacity;
+  saveUsage(u);
+  renderQuota();
+}
+function markExhausted(capacity) {
+  const u = loadUsage();
+  if (capacity) u.capacity = capacity;
+  u.spent = u.capacity;
+  saveUsage(u);
+  renderQuota();
+}
+function renderQuota() {
+  const u = loadUsage();
+  const left = Math.max(0, u.capacity - u.spent);
+  const counts = MODELS.map((m) => `${m.name} ~${Math.floor(left / m.cost)}`).join(" · ");
+  $("quota").textContent = left
+    ? `Bugün kalan (tahmini): ${counts}`
+    : "Bugünkü kota bitti, gece 03:00'te sıfırlanır.";
+}
 
 // ---- Galeri: resimler IndexedDB'de durur (localStorage'a sığmaz) ----
 const db = new Promise((resolve, reject) => {
@@ -48,20 +91,19 @@ function base64ToBlob(b64) {
   return new Blob([bytes], { type: "image/jpeg" });
 }
 
-async function drawCloudflare(prompt, style) {
+async function draw(prompt, style, model) {
   const res = await fetch(WORKER_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, style }),
+    body: JSON.stringify({ prompt, style, model: model.key }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Hata ${res.status}`);
-  return { blob: base64ToBlob(data.image), engine: "FLUX", english: data.prompt };
-}
-
-function draw(prompt, style) {
-  if (!WORKER_URL) return Promise.reject(new Error("Çizim sunucusu henüz bağlanmadı"));
-  return drawCloudflare(prompt, style);
+  if (!res.ok) {
+    if (data.quota) markExhausted(data.capacity);
+    throw new Error(data.error || `Hata ${res.status}`);
+  }
+  addUsage(data.cost || model.cost, data.capacity);
+  return { blob: base64ToBlob(data.image), engine: model.name, english: data.prompt };
 }
 
 // ---- Arayüz ----
@@ -79,6 +121,15 @@ function renderControls() {
     b.setAttribute("aria-pressed", i === state.style);
     b.onclick = () => { state.style = i; renderControls(); };
     $("styles").append(b);
+  });
+  $("models").innerHTML = "";
+  MODELS.forEach((m, i) => {
+    const b = document.createElement("button");
+    b.className = "model";
+    b.innerHTML = `<b>${m.name}</b><small>${m.note}</small>`;
+    b.setAttribute("aria-pressed", i === state.model);
+    b.onclick = () => { state.model = i; renderControls(); };
+    $("models").append(b);
   });
   $("count").innerHTML = "";
   [1, 2, 3, 4].forEach((n) => {
@@ -172,6 +223,8 @@ function cardFor(item) {
       $("prompt").value = item.prompt;
       const idx = STYLES.findIndex((s) => s.name === item.styleName);
       state.style = idx < 0 ? 0 : idx;
+      const mi = MODELS.findIndex((m) => m.key === item.modelKey);
+      state.model = mi < 0 ? 0 : mi;
       state.count = 1;
       renderControls();
       generate();
@@ -220,6 +273,7 @@ async function generate() {
   $("go").disabled = true;
 
   const style = STYLES[state.style];
+  const model = MODELS[state.model];
   const n = state.count;
   setStatus(n > 1 ? `${n} resim çiziliyor…` : "Çiziliyor…");
   $("grid").querySelector(".empty")?.remove();
@@ -230,10 +284,10 @@ async function generate() {
     const slot = placeholder();
     $("grid").prepend(slot);
     try {
-      const out = await draw(prompt, style.text);
+      const out = await draw(prompt, style.text, model);
       const item = {
         id: Date.now() * 10 + i, prompt, english: out.english, engine: out.engine,
-        styleName: style.name, blob: out.blob,
+        styleName: style.name, modelKey: model.key, blob: out.blob,
       };
       await saveImage(item);
       slot.replaceWith(cardFor(item));
@@ -270,6 +324,7 @@ $("clear").onclick = async () => {
 
 renderControls();
 renderGallery();
+renderQuota();
 
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js");

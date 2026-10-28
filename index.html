@@ -46,6 +46,14 @@
     padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer; }
   .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--text); background: #3a2620; }
 
+  .models { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0 0 12px; }
+  .model { border: 1px solid var(--line); background: var(--panel2); color: var(--dim); border-radius: 10px;
+    padding: 8px 10px; font: inherit; text-align: left; cursor: pointer; }
+  .model b { display: block; color: var(--text); font-size: 14px; }
+  .model small { font-size: 12px; }
+  .model[aria-pressed="true"] { border-color: var(--accent); background: #3a2620; }
+  .quota { color: #6d6680; font-size: 13px; margin: 0 2px; }
+
   .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .count { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
   .count button { background: var(--panel2); color: var(--dim); border: 0; padding: 8px 13px; font: inherit; cursor: pointer; }
@@ -102,6 +110,7 @@
   <section class="composer">
     <textarea id="prompt" placeholder="Ne çizeyim? Türkçe yazabilirsin. Örnek: yağmurlu bir gecede İstanbul'da kırmızı şemsiyeli kedi"></textarea>
     <div class="chips" id="styles"></div>
+    <div class="models" id="models"></div>
     <div class="row">
       <span class="count-label">Adet</span>
       <div class="count" id="count"></div>
@@ -110,6 +119,7 @@
   </section>
 
   <div class="status" id="status"></div>
+  <div class="quota" id="quota"></div>
 
   <div class="bar">
     <h2>Galeri</h2>
